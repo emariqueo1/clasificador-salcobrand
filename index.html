@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clasificador Salcobrand - Equipo</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+        }
+        .card h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 15px;
+        }
+        input[type="text"], input[type="file"] {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            margin: 8px 0;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 5px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            width: 100%;
+        }
+        .btn-primary:hover { transform: translateY(-2px); }
+        .btn-primary:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn-secondary {
+            background: #0891b2;
+            color: white;
+        }
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+        }
+        .progress-section {
+            background: #f0f9ff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 2px solid #0ea5e9;
+            margin: 20px 0;
+            display: none;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 20px;
+            background: #e0f2fe;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #0ea5e9 0%, #06b6d4 100%);
+            transition: width 0.3s ease;
+            border-radius: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 13px;
+        }
+        th {
+            background: #f3f4f6;
+            font-weight: 600;
+            color: #374151;
+        }
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .cat-cosme { background: #dbeafe; color: #1e40af; }
+        .cat-cosca { background: #fce7f3; color: #9f1239; }
+        .cat-cospe { background: #e0e7ff; color: #4338ca; }
+        .cat-dumma { background: #fef3c7; color: #92400e; }
+        .cat-infla { background: #fee2e2; color: #991b1b; }
+        .hidden { display: none !important; }
+        .alert {
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .alert-info {
+            background: #eff6ff;
+            border: 1px solid #3b82f6;
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Clasificador de Categorías - Salcobrand</h1>
+            <p>Clasificación inteligente compartida para todo el equipo</p>
+        </div>
+
+        <!-- Clasificación Individual -->
+        <div class="card">
+            <h2>🔍 Clasificación Individual</h2>
+            <input type="text" id="productoIndividual" placeholder="Ejemplo: Shampoo Pantene 400ml">
+            <input type="text" id="fabricanteIndividual" placeholder="Fabricante (opcional)">
+            <button class="btn btn-primary" onclick="clasificarIndividual()" id="btnClasificar">
+                🤖 Clasificar con IA
+            </button>
+        </div>
+
+        <!-- Carga Masiva -->
+        <div class="card">
+            <h2>📁 Carga Masiva</h2>
+            <div class="alert alert-info">
+                <strong>Formato:</strong> Excel o CSV con columnas: <strong>Producto</strong> (obligatorio), <strong>Fabricante</strong> (opcional)
+            </div>
+            
+            <div id="progressSection" class="progress-section">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                    <span style="font-weight: 700; color: #0369a1;">🔄 Procesando productos...</span>
+                    <span id="progressText" style="font-weight: 700; color: #0369a1;">0 / 0</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="progressBar" class="progress-bar" style="width: 0%"></div>
+                </div>
+                <p style="margin-top: 12px; text-align: center; color: #0369a1; font-weight: 600;">
+                    ⏳ Buscando en la web y clasificando cada producto...
+                </p>
+            </div>
+
+            <input type="file" id="fileInput" accept=".csv,.xlsx,.xls">
+            <button class="btn btn-primary" onclick="iniciarCargaMasiva()" id="btnMasiva">
+                🚀 INICIAR CLASIFICACIÓN MASIVA
+            </button>
+        </div>
+
+        <!-- Resultados -->
+        <div class="card">
+            <h2>📊 Resultados Compartidos (<span id="resultCount">0</span>)</h2>
+            <button class="btn btn-secondary" onclick="cargarProductos()">🔄 Actualizar</button>
+            <button class="btn btn-secondary" onclick="exportarExcel()">📥 Exportar Excel</button>
+            <button class="btn btn-danger" onclick="limpiarResultados()">🗑️ Limpiar Todo</button>
+            
+            <div style="overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Fabricante</th>
+                            <th>Categoría</th>
+                            <th>Tipo Envase</th>
+                            <th>Riesgo</th>
+                            <th>Razonamiento</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultsBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let productos = [];
+
+        // Cargar productos al iniciar
+        window.onload = function() {
+            cargarProductos();
+        };
+
+        async function clasificarIndividual() {
+            const producto = document.getElementById('productoIndividual').value.trim();
+            const fabricante = document.getElementById('fabricanteIndividual').value.trim();
+            
+            if (!producto) {
+                alert('⚠️ Ingresa un producto');
+                return;
+            }
+
+            const btn = document.getElementById('btnClasificar');
+            btn.disabled = true;
+            btn.textContent = '🔄 Clasificando...';
+
+            try {
+                const response = await fetch(`${API_URL}/api/clasificar`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ producto, fabricante })
+                });
+
+                if (!response.ok) {
+                    throw new Error('Error en clasificación');
+                }
+
+                alert('✅ Producto clasificado correctamente');
+                document.getElementById('productoIndividual').value = '';
+                document.getElementById('fabricanteIndividual').value = '';
+                await cargarProductos();
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🤖 Clasificar con IA';
+            }
+        }
+
+        async function iniciarCargaMasiva() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('⚠️ Selecciona un archivo primero');
+                return;
+            }
+
+            try {
+                const datos = await leerArchivo(file);
+                
+                if (datos.length === 0) {
+                    alert('❌ No se encontraron productos válidos');
+                    return;
+                }
+
+                const confirmar = confirm(`✅ Se encontraron ${datos.length} productos.\n\n¿Iniciar clasificación?\n\n⏱️ Tiempo estimado: ~${Math.ceil(datos.length * 5 / 60)} minutos`);
+                
+                if (!confirmar) return;
+
+                await procesarProductos(datos);
+                
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+
+        async function leerArchivo(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                
+                reader.onload = (e) => {
+                    try {
+                        let datos = [];
+                        
+                        if (file.name.endsWith('.csv')) {
+                            const text = e.target.result;
+                            const lineas = text.split('\n').slice(1);
+                            datos = lineas.filter(l => l.trim()).map(linea => {
+                                const partes = linea.split(',');
+                                return {
+                                    producto: partes[0]?.trim().replace(/"/g, ''),
+                                    fabricante: partes[1]?.trim().replace(/"/g, '') || ''
+                                };
+                            });
+                        } else {
+                            const workbook = XLSX.read(e.target.result, { type: 'binary' });
+                            const hoja = workbook.Sheets[workbook.SheetNames[0]];
+                            const json = XLSX.utils.sheet_to_json(hoja);
+                            datos = json.map(row => ({
+                                producto: row.Producto || row.producto || '',
+                                fabricante: row.Fabricante || row.fabricante || row.Marca || ''
+                            }));
+                        }
+                        
+                        const validos = datos.filter(d => d.producto && d.producto.trim());
+                        resolve(validos);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                
+                reader.onerror = () => reject(new Error('Error al leer archivo'));
+                
+                if (file.name.endsWith('.csv')) {
+                    reader.readAsText(file);
+                } else {
+                    reader.readAsBinaryString(file);
+                }
+            });
+        }
+
+        async function procesarProductos(datos) {
+            const progressSection = document.getElementById('progressSection');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const btnMasiva = document.getElementById('btnMasiva');
+            
+            progressSection.style.display = 'block';
+            btnMasiva.disabled = true;
+            
+            for (let i = 0; i < datos.length; i++) {
+                const item = datos[i];
+                progressText.textContent = `${i + 1} / ${datos.length}`;
+                progressBar.style.width = `${((i + 1) / datos.length) * 100}%`;
+                
+                try {
+                    await fetch(`${API_URL}/api/clasificar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ 
+                            producto: item.producto, 
+                            fabricante: item.fabricante 
+                        })
+                    });
+                } catch (error) {
+                    console.error('Error:', error);
+                }
+                
+                await new Promise(resolve => setTimeout(resolve, 1000));
+            }
+            
+            progressSection.style.display = 'none';
+            btnMasiva.disabled = false;
+            await cargarProductos();
+            alert(`✅ Completado! Se clasificaron ${datos.length} productos.`);
+        }
+
+        async function cargarProductos() {
+            try {
+                const response = await fetch(`${API_URL}/api/productos`);
+                productos = await response.json();
+                
+                document.getElementById('resultCount').textContent = productos.length;
+                
+                const tbody = document.getElementById('resultsBody');
+                tbody.innerHTML = '';
+                
+                productos.forEach(item => {
+                    const row = tbody.insertRow();
+                    
+                    const catClass = {
+                        'CosMe': 'cat-cosme',
+                        'CosCa': 'cat-cosca',
+                        'CosPe': 'cat-cospe',
+                        'DumMa': 'cat-dumma',
+                        'InFla': 'cat-infla'
+                    };
+                    
+                    const fecha = new Date(item.fecha_clasificacion).toLocaleString('es-CL');
+                    
+                    row.innerHTML = `
+                        <td style="font-weight: 500;">${item.producto}</td>
+                        <td>${item.fabricante}</td>
+                        <td><span class="badge ${catClass[item.categoria_salcobrand]}">${item.categoria_salcobrand}</span></td>
+                        <td>${item.tipo_envase || 'N/A'}</td>
+                        <td>${item.riesgo_merma || 'N/A'}</td>
+                        <td style="max-width: 300px; font-size: 12px;">${item.razonamiento || 'N/A'}</td>
+                        <td style="font-size: 11px; color: #666;">${fecha}</td>
+                    `;
+                });
+                
+            } catch (error) {
+                console.error('Error cargando productos:', error);
+            }
+        }
+
+        function exportarExcel() {
+            const ws = XLSX.utils.json_to_sheet(productos.map(p => ({
+                'Producto': p.producto,
+                'Fabricante': p.fabricante,
+                'Categoría': p.categoria_salcobrand,
+                'Tipo Envase': p.tipo_envase,
+                'Envase Secundario': p.tiene_envase_secundario,
+                'Riesgo Merma': p.riesgo_merma,
+                'Razonamiento': p.razonamiento,
+                'Fuente Web': p.fuente_web,
+                'Fecha': new Date(p.fecha_clasificacion).toLocaleString('es-CL')
+            })));
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Clasificación");
+            XLSX.writeFile(wb, `clasificacion_salcobrand_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        async function limpiarResultados() {
+            if (!confirm('¿Eliminar TODOS los resultados? Esta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            try {
+                await fetch(`${API_URL}/api/limpiar`, { method: 'DELETE' });
+                await cargarProductos();
+                alert('✅ Resultados eliminados');
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>
