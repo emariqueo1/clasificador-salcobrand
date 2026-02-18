@@ -1,6 +1,6 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import anthropic
+import requests
 import os
 import sqlite3
 from datetime import datetime
@@ -50,9 +50,6 @@ def clasificar():
         if not producto:
             return jsonify({'error': 'Producto requerido'}), 400
         
-        # Llamar a Anthropic API
-        client = anthropic.Client(api_key=ANTHROPIC_API_KEY)
-        
         prompt = f"""Clasifica este producto para Salcobrand: "{producto}" {f'Fabricante: {fabricante}' if fabricante else ''}
 
 **PASO 1: BÚSQUEDA WEB (OBLIGATORIO)**
@@ -88,24 +85,38 @@ Responde SOLO JSON:
   "fuente_web": "info clave de la web"
 }}"""
         
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1500,
-            tools=[{
-                "type": "web_search_20250305",
-                "name": "web_search"
-            }],
-            messages=[{
-                "role": "user",
-                "content": prompt
-            }]
+        # Llamar a Anthropic API usando requests
+        api_response = requests.post(
+            'https://api.anthropic.com/v1/messages',
+            headers={
+                'Content-Type': 'application/json',
+                'x-api-key': ANTHROPIC_API_KEY,
+                'anthropic-version': '2023-06-01'
+            },
+            json={
+                'model': 'claude-sonnet-4-20250514',
+                'max_tokens': 1500,
+                'tools': [{
+                    'type': 'web_search_20250305',
+                    'name': 'web_search'
+                }],
+                'messages': [{
+                    'role': 'user',
+                    'content': prompt
+                }]
+            }
         )
+        
+        if not api_response.ok:
+            raise Exception(f"API Error: {api_response.text}")
+        
+        message_data = api_response.json()
         
         # Extraer respuesta
         texto = ''
-        for block in message.content:
-            if block.type == 'text':
-                texto += block.text
+        for block in message_data['content']:
+            if block['type'] == 'text':
+                texto += block['text']
         
         # Limpiar y parsear JSON
         texto = texto.replace('```json', '').replace('```', '').strip()
