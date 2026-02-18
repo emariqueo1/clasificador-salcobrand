@@ -51,7 +51,7 @@ def clasificar():
             return jsonify({'error': 'Producto requerido'}), 400
         
         # Llamar a Anthropic API
-        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+        client = anthropic.Client(api_key=ANTHROPIC_API_KEY)
         
         prompt = f"""Clasifica este producto para Salcobrand: "{producto}" {f'Fabricante: {fabricante}' if fabricante else ''}
 
